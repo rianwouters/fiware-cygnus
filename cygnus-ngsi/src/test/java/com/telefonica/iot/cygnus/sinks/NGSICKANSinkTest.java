@@ -773,9 +773,9 @@ public class NGSICKANSinkTest {
               "\"fiwareServicePath\": \"myServicePath\"," + 
               "\"entityId\": \"null\"," + 
               "\"entityType\": \"null\"," +
-              "\"attrName\": \"name1\"," + 
-              "\"attrType\": \"type1\"," +
-              "\"attrValue\": \"value1\"," + 
+              "\"attrName\": \"name2\"," + 
+              "\"attrType\": \"type2\"," +
+              "\"attrValue\": {\"p1\":\"v1\",\"p2\":true}," + 
               "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
             "}";
 
@@ -787,26 +787,38 @@ public class NGSICKANSinkTest {
 
         sink.setPersistenceBackend(backend);
 
-        NotifyContextRequest request = new NotifyContextRequest();
+        final NotifyContextRequest request = new NotifyContextRequest();
         NotifyContextRequest.ContextElement contextElement = request.new ContextElement();
         
-        NotifyContextRequest.ContextMetadata md1 = request.new ContextMetadata();
+        final NotifyContextRequest.ContextMetadata md1 = request.new ContextMetadata();
         md1.setType("md1_type");
         md1.setName("md1_name");
         md1.setContextMetadata(new JsonPrimitive("md1_value"));
 
-        ArrayList<NotifyContextRequest.ContextMetadata> mds = new ArrayList<NotifyContextRequest.ContextMetadata>();
-        mds.add(md1);
+        final ArrayList<NotifyContextRequest.ContextMetadata> mds = new ArrayList<NotifyContextRequest.ContextMetadata>() {{
+          add(md1);
+        }};
 
-        NotifyContextRequest.ContextAttribute stringAttr = request.new ContextAttribute();
+        final NotifyContextRequest.ContextAttribute stringAttr = request.new ContextAttribute();
         stringAttr.setType("type1");
         stringAttr.setName("name1");
         stringAttr.setContextValue(new JsonPrimitive("value1"));
         stringAttr.setContextMetadata(mds);
 
-        ArrayList<NotifyContextRequest.ContextAttribute> attrs = new ArrayList<NotifyContextRequest.ContextAttribute>();
-        attrs.add(stringAttr);
-        attrs.add(stringAttr);
+        final JsonObject jsonValue = new JsonObject();
+        jsonValue.addProperty("p1", "v1");
+        jsonValue.addProperty("p2", Boolean.TRUE);
+
+        final NotifyContextRequest.ContextAttribute jsonAttr = request.new ContextAttribute();
+        jsonAttr.setType("type2");
+        jsonAttr.setName("name2");
+        jsonAttr.setContextValue(jsonValue);
+        jsonAttr.setContextMetadata(mds);
+
+        ArrayList<NotifyContextRequest.ContextAttribute> attrs = new ArrayList<NotifyContextRequest.ContextAttribute>() {{
+          add(stringAttr);
+          add(jsonAttr);
+        }};
 
         contextElement.setAttributes(attrs);
 
