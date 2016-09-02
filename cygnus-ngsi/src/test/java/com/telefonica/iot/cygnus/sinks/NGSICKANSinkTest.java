@@ -20,6 +20,7 @@ package com.telefonica.iot.cygnus.sinks;
 
 import static org.junit.Assert.*; // this is required by "fail" like assertions
 import com.telefonica.iot.cygnus.containers.NotifyContextRequest;
+import com.telefonica.iot.cygnus.backends.ckan.CKANBackend;
 import static com.telefonica.iot.cygnus.utils.CommonUtilsForTests.getTestTraceHead;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -27,6 +28,10 @@ import org.apache.flume.Context;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.junit.Test;
+import java.util.ArrayList;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+
 
 /**
  *
@@ -725,6 +730,97 @@ public class NGSICKANSinkTest {
                     + "-  OK  - A resource name length greater than 100 characters has been detected");
         } // try catch
     } // testBuildResourceNameLength
+
+
+    @Test
+    public void testPersistBatch() throws Exception {
+        String th = getTestTraceHead("[NGSICKANSink.persistBatch]");
+        System.out.println(th + "-------- A batch must be peristed correctly");
+        String attrPersistence = null; // default
+        String batchSize = null; // default
+        String batchTime = null; // default
+        String batchTTL = null; // default
+        String dataModel = null; // default
+        String enableEncoding = null; // defalt
+        String enableGrouping = null; // default
+        String enableLowercase = null; // default
+        String host = null; // default
+        String password = null; // default
+        String port = null; // default
+        String username = null; // default
+        NGSICKANSink sink = new NGSICKANSink();
+
+        sink.configure(createContext(attrPersistence, batchSize, batchTime, batchTTL, dataModel, enableEncoding,
+                enableGrouping, enableLowercase, host, password, port, username));
+       
+        CKANBackend backend = new CKANBackend() {
+          public void persist(String orgName, String pkgName, String resName, String records, boolean createEnabled)
+          throws Exception {
+            String expectedRecords = 
+            "{" +
+              "\"recvTimeTs\": \"12\"," + 
+              "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+              "\"fiwareServicePath\": \"myServicePath\"," + 
+              "\"entityId\": \"null\"," + 
+              "\"entityType\": \"null\"," +
+              "\"attrName\": \"name1\"," + 
+              "\"attrType\": \"type1\"," +
+              "\"attrValue\": \"value1\"," + 
+              "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" +
+            "},{" +
+              "\"recvTimeTs\": \"12\"," + 
+              "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+              "\"fiwareServicePath\": \"myServicePath\"," + 
+              "\"entityId\": \"null\"," + 
+              "\"entityType\": \"null\"," +
+              "\"attrName\": \"name1\"," + 
+              "\"attrType\": \"type1\"," +
+              "\"attrValue\": \"value1\"," + 
+              "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+            "}";
+
+            System.out.println("PERSIST " + orgName + pkgName + resName + records);
+
+            assertEquals(expectedRecords, records);
+          }
+        };
+
+        sink.setPersistenceBackend(backend);
+
+        NotifyContextRequest request = new NotifyContextRequest();
+        NotifyContextRequest.ContextElement contextElement = request.new ContextElement();
+        
+        NotifyContextRequest.ContextMetadata md1 = request.new ContextMetadata();
+        md1.setType("md1_type");
+        md1.setName("md1_name");
+        md1.setContextMetadata(new JsonPrimitive("md1_value"));
+
+        ArrayList<NotifyContextRequest.ContextMetadata> mds = new ArrayList<NotifyContextRequest.ContextMetadata>();
+        mds.add(md1);
+
+        NotifyContextRequest.ContextAttribute stringAttr = request.new ContextAttribute();
+        stringAttr.setType("type1");
+        stringAttr.setName("name1");
+        stringAttr.setContextValue(new JsonPrimitive("value1"));
+        stringAttr.setContextMetadata(mds);
+
+        ArrayList<NotifyContextRequest.ContextAttribute> attrs = new ArrayList<NotifyContextRequest.ContextAttribute>();
+        attrs.add(stringAttr);
+        attrs.add(stringAttr);
+
+        contextElement.setAttributes(attrs);
+
+        NGSIBatch batch = createBatch(12345, "myService", "myServicePath", "myDestination", contextElement); 
+        
+        try {
+            sink.persistBatch(batch);
+            System.out.println(th + "- OK  - Peristence succeeded");
+            assertTrue(true);
+        } catch (Exception e) {
+            assertTrue(false);
+            System.out.println(th + "-  OK  - Failed to persist");
+        } // try catch
+    } // testPersistBatch
 
     private NGSIBatch createBatch(long recvTimeTs, String service, String servicePath, String destination,
             NotifyContextRequest.ContextElement contextElement) {
