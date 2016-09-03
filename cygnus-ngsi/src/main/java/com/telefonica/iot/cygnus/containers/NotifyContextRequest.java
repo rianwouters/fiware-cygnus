@@ -254,6 +254,10 @@ public class NotifyContextRequest {
             return type;
         } // getType
         
+        public JsonElement getContextValue() {
+            return value;
+        }
+
         /**
          * Gets context value.
          * @param asStringRepresentation

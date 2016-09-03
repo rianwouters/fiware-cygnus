@@ -30,7 +30,12 @@ import com.telefonica.iot.cygnus.utils.NGSICharsets;
 import com.telefonica.iot.cygnus.utils.NGSIConstants;
 import com.telefonica.iot.cygnus.utils.NGSIUtils;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.Map;
 import org.apache.flume.Context;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonObject;
 
 /**
  *
@@ -48,6 +53,7 @@ public class NGSICKANSink extends NGSISink {
     private String orionUrl;
     private boolean rowAttrPersistence;
     private boolean ssl;
+    private boolean expandJson;
     private CKANBackend persistenceBackend;
 
     /**
@@ -158,6 +164,19 @@ public class NGSICKANSink extends NGSISink {
                 + sslStr + ") -- Must be 'true' or 'false'");
         }  // if else
         
+        //TODO: refactor getBoolean
+        String expandJsonStr = context.getString("expandJson", "false");
+        
+        if (expandJsonStr.equals("true") || expandJsonStr.equals("false")) {
+            expandJson = Boolean.valueOf(expandJsonStr);
+            LOGGER.debug("[" + this.getName() + "] Reading configuration (expandJson="
+                + expandJsonStr + ")");
+        } else  {
+            invalidConfiguration = true;
+            LOGGER.debug("[" + this.getName() + "] Invalid configuration (expandJson="
+                + expandJsonStr + ") -- Must be 'true' or 'false'");
+        }  // if else
+
         super.configure(context);
         
         // Techdebt: allow this sink to work with all the data models
@@ -305,34 +324,57 @@ public class NGSICKANSink extends NGSISink {
             for (NotifyContextRequest.ContextAttribute contextAttribute : contextAttributes) {
                 String attrName = contextAttribute.getName();
                 String attrType = contextAttribute.getType();
-                String attrValue = contextAttribute.getContextValue(true);
-                String attrMetadata = contextAttribute.getContextMetadata();
                 LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", type="
                         + attrType + ")");
-
-                // create a column and aggregate it
-                String record = "{\"" + NGSIConstants.RECV_TIME_TS + "\": \"" + recvTimeTs / 1000 + "\","
-                    + "\"" + NGSIConstants.RECV_TIME + "\": \"" + recvTime + "\","
-                    + "\"" + NGSIConstants.FIWARE_SERVICE_PATH + "\": \"" + servicePath + "\","
-                    + "\"" + NGSIConstants.ENTITY_ID + "\": \"" + entityId + "\","
-                    + "\"" + NGSIConstants.ENTITY_TYPE + "\": \"" + entityType + "\","
-                    + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + attrName + "\","
-                    + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + attrType + "\","
-                    + "\"" + NGSIConstants.ATTR_VALUE + "\": " + attrValue;
+                String attrMetadata = contextAttribute.getContextMetadata();
+                JsonElement attrValue = contextAttribute.getContextValue();
 
                 // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
                 // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
-                if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
-                    record += ",\"" + NGSIConstants.ATTR_MD + "\": " + attrMetadata + "}";
+                String metadataStr = attrMetadata.equals(CommonConstants.EMPTY_MD) ? "" : ",\"" + NGSIConstants.ATTR_MD + "\": " + attrMetadata;
+                if (expandJson && attrValue.isJsonObject()) {
+                  JsonObject jsonValue = (JsonObject) attrValue;
+                  for(Map.Entry<String, JsonElement> entry : jsonValue.entrySet()) {
+                    // TODO: refactor record contruction
+                    
+                    JsonPrimitive value = (JsonPrimitive) entry.getValue();
+                    String type = 
+                      value.isString() ? "String" :
+                      value.isBoolean() ? "Boolean" :
+                      value.isNumber() ? "Number" :
+                      "unknown";
+                    String name = attrName + "_" + entry.getKey(); 
+                    String record = "{\"" + NGSIConstants.RECV_TIME_TS + "\": \"" + recvTimeTs / 1000 + "\","
+                        + "\"" + NGSIConstants.RECV_TIME + "\": \"" + recvTime + "\","
+                        + "\"" + NGSIConstants.FIWARE_SERVICE_PATH + "\": \"" + servicePath + "\","
+                        + "\"" + NGSIConstants.ENTITY_ID + "\": \"" + entityId + "\","
+                        + "\"" + NGSIConstants.ENTITY_TYPE + "\": \"" + entityType + "\","
+                        + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + name + "\","
+                        + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + type + "\","
+                        + "\"" + NGSIConstants.ATTR_VALUE + "\": " + value + metadataStr + "}";
+                    if (records.isEmpty()) {
+                        records += record;
+                    } else {
+                        records += "," + record;
+                    } // if else
+                  }
                 } else {
-                    record += "}";
-                } // if else
+                  // create a column and aggregate it
+                  String record = "{\"" + NGSIConstants.RECV_TIME_TS + "\": \"" + recvTimeTs / 1000 + "\","
+                      + "\"" + NGSIConstants.RECV_TIME + "\": \"" + recvTime + "\","
+                      + "\"" + NGSIConstants.FIWARE_SERVICE_PATH + "\": \"" + servicePath + "\","
+                      + "\"" + NGSIConstants.ENTITY_ID + "\": \"" + entityId + "\","
+                      + "\"" + NGSIConstants.ENTITY_TYPE + "\": \"" + entityType + "\","
+                      + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + attrName + "\","
+                      + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + attrType + "\","
+                      + "\"" + NGSIConstants.ATTR_VALUE + "\": " + attrValue.toString() + metadataStr + "}";
+                  if (records.isEmpty()) {
+                      records += record;
+                  } else {
+                      records += "," + record;
+                  } // if else
+                }
 
-                if (records.isEmpty()) {
-                    records += record;
-                } else {
-                    records += "," + record;
-                } // if else
             } // for
         } // aggregate
 

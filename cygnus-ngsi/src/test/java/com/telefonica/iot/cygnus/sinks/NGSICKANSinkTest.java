@@ -734,6 +734,11 @@ public class NGSICKANSinkTest {
 
     @Test
     public void testPersistBatch() throws Exception {
+      testPersistBatch(false);
+      testPersistBatch(true);
+    }
+
+    private void testPersistBatch(final boolean expandJson) throws Exception {
         String th = getTestTraceHead("[NGSICKANSink.persistBatch]");
         System.out.println(th + "-------- A batch must be peristed correctly");
         String attrPersistence = null; // default
@@ -751,33 +756,66 @@ public class NGSICKANSinkTest {
         NGSICKANSink sink = new NGSICKANSink();
 
         sink.configure(createContext(attrPersistence, batchSize, batchTime, batchTTL, dataModel, enableEncoding,
-                enableGrouping, enableLowercase, host, password, port, username));
+                enableGrouping, enableLowercase, host, password, port, username, expandJson));
        
         CKANBackend backend = new CKANBackend() {
           public void persist(String orgName, String pkgName, String resName, String records, boolean createEnabled)
           throws Exception {
-            String expectedRecords = 
-            "{" +
-              "\"recvTimeTs\": \"12\"," + 
-              "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
-              "\"fiwareServicePath\": \"myServicePath\"," + 
-              "\"entityId\": \"null\"," + 
-              "\"entityType\": \"null\"," +
-              "\"attrName\": \"name1\"," + 
-              "\"attrType\": \"type1\"," +
-              "\"attrValue\": \"value1\"," + 
-              "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" +
-            "},{" +
-              "\"recvTimeTs\": \"12\"," + 
-              "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
-              "\"fiwareServicePath\": \"myServicePath\"," + 
-              "\"entityId\": \"null\"," + 
-              "\"entityType\": \"null\"," +
-              "\"attrName\": \"name2\"," + 
-              "\"attrType\": \"type2\"," +
-              "\"attrValue\": {\"p1\":\"v1\",\"p2\":true}," + 
-              "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
-            "}";
+            final String expectedRecords = expandJson
+              ? 
+                "{" +
+                  "\"recvTimeTs\": \"12\"," + 
+                  "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\": \"myServicePath\"," + 
+                  "\"entityId\": \"null\"," + 
+                  "\"entityType\": \"null\"," +
+                  "\"attrName\": \"name1\"," + 
+                  "\"attrType\": \"type1\"," +
+                  "\"attrValue\": \"value1\"," + 
+                  "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" +
+                "},{" +
+                  "\"recvTimeTs\": \"12\"," + 
+                  "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\": \"myServicePath\"," + 
+                  "\"entityId\": \"null\"," + 
+                  "\"entityType\": \"null\"," +
+                  "\"attrName\": \"name2_p1\"," + 
+                  "\"attrType\": \"String\"," +
+                  "\"attrValue\": \"v1\"," + 
+                  "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+                "},{" +
+                  "\"recvTimeTs\": \"12\"," + 
+                  "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\": \"myServicePath\"," + 
+                  "\"entityId\": \"null\"," + 
+                  "\"entityType\": \"null\"," +
+                  "\"attrName\": \"name2_p2\"," + 
+                  "\"attrType\": \"Boolean\"," +
+                  "\"attrValue\": true," + 
+                  "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+                "}"
+              :
+                "{" +
+                  "\"recvTimeTs\": \"12\"," + 
+                  "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\": \"myServicePath\"," + 
+                  "\"entityId\": \"null\"," + 
+                  "\"entityType\": \"null\"," +
+                  "\"attrName\": \"name1\"," + 
+                  "\"attrType\": \"type1\"," +
+                  "\"attrValue\": \"value1\"," + 
+                  "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" +
+                "},{" +
+                  "\"recvTimeTs\": \"12\"," + 
+                  "\"recvTime\": \"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\": \"myServicePath\"," + 
+                  "\"entityId\": \"null\"," + 
+                  "\"entityType\": \"null\"," +
+                  "\"attrName\": \"name2\"," + 
+                  "\"attrType\": \"type2\"," +
+                  "\"attrValue\": {\"p1\":\"v1\",\"p2\":true}," + 
+                  "\"attrMd\": [{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+                "}";
 
             System.out.println("PERSIST " + orgName + pkgName + resName + records);
 
@@ -846,6 +884,14 @@ public class NGSICKANSinkTest {
     private Context createContext(String attrPersistence, String batchSize, String batchTime, String batchTTL,
             String dataModel, String enableEncoding, String enableGrouping, String enableLowercase, String host,
             String password, String port, String username) {
+      return createContext(attrPersistence, batchSize, batchTime, batchTTL,
+        dataModel, enableEncoding, enableGrouping, enableLowercase, host,
+        password, port, username, false);
+    } // createContext
+
+    private Context createContext(String attrPersistence, String batchSize, String batchTime, String batchTTL,
+            String dataModel, String enableEncoding, String enableGrouping, String enableLowercase, String host,
+            String password, String port, String username, boolean expandJson) {
         Context context = new Context();
         context.put("attr_persistence", attrPersistence);
         context.put("batch_size", batchSize);
@@ -859,6 +905,7 @@ public class NGSICKANSinkTest {
         context.put("mysql_password", password);
         context.put("mysql_port", port);
         context.put("mysql_username", username);
+        context.put("expandJson", String.valueOf(expandJson));
         return context;
     } // createContext
     
