@@ -29,6 +29,7 @@ import com.telefonica.iot.cygnus.utils.CommonUtils;
 import com.telefonica.iot.cygnus.utils.NGSICharsets;
 import com.telefonica.iot.cygnus.utils.NGSIConstants;
 import com.telefonica.iot.cygnus.utils.NGSIUtils;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
@@ -234,7 +235,7 @@ public class NGSICKANSink extends NGSISink {
     private abstract class CKANAggregator {
 
         // string containing the data records
-        protected String records;
+        protected List<String> records;
 
         protected String service;
         protected String servicePath;
@@ -245,11 +246,11 @@ public class NGSICKANSink extends NGSISink {
         protected String resId;
 
         public CKANAggregator() {
-            records = "";
+            records = new ArrayList<String>();
         } // CKANAggregator
 
         public String getAggregation() {
-            return records;
+            return String.join(",", records);
         } // getAggregation
 
         public String getOrgName(boolean enableLowercase) {
@@ -332,6 +333,7 @@ public class NGSICKANSink extends NGSISink {
                 // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
                 // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
                 String metadataStr = attrMetadata.equals(CommonConstants.EMPTY_MD) ? "" : ",\"" + NGSIConstants.ATTR_MD + "\": " + attrMetadata;
+
                 if (expandJson && attrValue.isJsonObject()) {
                   JsonObject jsonValue = (JsonObject) attrValue;
                   for(Map.Entry<String, JsonElement> entry : jsonValue.entrySet()) {
@@ -352,11 +354,7 @@ public class NGSICKANSink extends NGSISink {
                         + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + name + "\","
                         + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + type + "\","
                         + "\"" + NGSIConstants.ATTR_VALUE + "\": " + value + metadataStr + "}";
-                    if (records.isEmpty()) {
-                        records += record;
-                    } else {
-                        records += "," + record;
-                    } // if else
+                    records.add(record);
                   }
                 } else {
                   // create a column and aggregate it
@@ -368,11 +366,7 @@ public class NGSICKANSink extends NGSISink {
                       + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + attrName + "\","
                       + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + attrType + "\","
                       + "\"" + NGSIConstants.ATTR_VALUE + "\": " + attrValue.toString() + metadataStr + "}";
-                  if (records.isEmpty()) {
-                      records += record;
-                  } else {
-                      records += "," + record;
-                  } // if else
+                  records.add(record);
                 }
 
             } // for
@@ -436,11 +430,7 @@ public class NGSICKANSink extends NGSISink {
             } // for
 
             // now, aggregate the column
-            if (records.isEmpty()) {
-                records += record + "}";
-            } else {
-                records += "," + record + "}";
-            } // if else
+            records.add(record);
         } // aggregate
 
     } // ColumnAggregator
@@ -462,11 +452,7 @@ public class NGSICKANSink extends NGSISink {
         LOGGER.info("[" + this.getName() + "] Persisting data at OrionCKANSink (orgName=" + orgName
                 + ", pkgName=" + pkgName + ", resName=" + resName + ", data=" + aggregation + ")");
 
-        if (aggregator instanceof RowAggregator) {
-            persistenceBackend.persist(orgName, pkgName, resName, aggregation, true);
-        } else {
-            persistenceBackend.persist(orgName, pkgName, resName, aggregation, false);
-        } // if else
+        persistenceBackend.persist(orgName, pkgName, resName, aggregation, aggregator instanceof RowAggregator);
     } // persistAggregation
 
     /**
