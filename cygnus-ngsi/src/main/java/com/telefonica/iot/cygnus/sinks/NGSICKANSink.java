@@ -222,7 +222,7 @@ public class NGSICKANSink extends NGSISink {
             } // for
 
             // persist the aggregation
-            persistAggregation(aggregator);
+            aggregator.persist();
             batch.setPersisted(destination);
         } // for
     } // persistBatch
@@ -235,6 +235,7 @@ public class NGSICKANSink extends NGSISink {
         // string containing the data records
         protected final JsonArray records;
 
+        protected CKANBackend backend;
         protected String service;
         protected String servicePath;
         protected String destination;
@@ -242,16 +243,18 @@ public class NGSICKANSink extends NGSISink {
         protected String pkgName;
         protected String resName;
         protected String resId;
-        protected boolean lowercase;
+        protected boolean create;
 
-        public Aggregator(String service, String servicePath, String destination) throws Exception {
+        public Aggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws Exception {
             this.records = new JsonArray();
             this.service = service;
             this.servicePath = servicePath;
             this.destination = destination;
-            this.orgName = buildOrgName(service);
-            this.pkgName = buildPkgName(service, servicePath);
-            this.resName = buildResName(destination);
+            this.backend = backend;
+            this.create = create;
+            this.orgName = buildOrgName(service).toLowerCase();
+            this.pkgName = buildPkgName(service, servicePath).toLowerCase();
+            this.resName = buildResName(destination).toLowerCase();
         } // Aggregator
 
         public String getAggregation() {
@@ -259,17 +262,14 @@ public class NGSICKANSink extends NGSISink {
             return s.substring(1, s.length() - 1);
         } // getAggregation
 
-        public String getOrgName() {
-            return orgName.toLowerCase();
-        } // getOrgName
+        public void persist() throws Exception {
+            String aggregation = getAggregation();
 
-        public String getPkgName() {
-            return pkgName.toLowerCase();
-        } // getPkgName
+            LOGGER.info("[" + NGSICKANSink.this.getName() + "] Persisting data at OrionCKANSink (orgName=" + orgName
+                    + ", pkgName=" + pkgName + ", resName=" + resName + ", data=" + aggregation + ")");
 
-        public String getResName() {
-            return resName.toLowerCase();
-        } // getResName
+            backend.persist(orgName, pkgName, resName, aggregation, create);
+        } // persist
 
         public abstract void aggregate(NGSIEvent cygnusEvent) throws Exception;
 
@@ -280,8 +280,8 @@ public class NGSICKANSink extends NGSISink {
      */
     private class RowAggregator extends Aggregator {
 
-        public RowAggregator(String service, String servicePath, String destination) throws Exception {
-            super(service, servicePath, destination);
+        public RowAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws Exception {
+            super(service, servicePath, destination, backend, create);
         } // RowAggregator
 
         @Override
@@ -390,8 +390,8 @@ public class NGSICKANSink extends NGSISink {
      */
     private class ColumnAggregator extends Aggregator {
 
-        public ColumnAggregator(String service, String servicePath, String destination) throws Exception {
-            super(service, servicePath, destination);
+        public ColumnAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws Exception {
+            super(service, servicePath, destination, backend, create);
         } // ColumnAggregator
 
         @Override
@@ -452,23 +452,11 @@ public class NGSICKANSink extends NGSISink {
         String servicePath = e.getServicePath();
         String destination = e.getEntity();
         if (rowAttrPersistence) {
-            return new RowAggregator(service, servicePath, destination);
+            return new RowAggregator(service, servicePath, destination, persistenceBackend, true);
         } else {
-            return new ColumnAggregator(service, servicePath, destination);
+            return new ColumnAggregator(service, servicePath, destination, persistenceBackend, false);
         } // if else
     } // getAggregator
-
-    private void persistAggregation(Aggregator aggregator) throws Exception {
-        String aggregation = aggregator.getAggregation();
-        String orgName = aggregator.getOrgName();
-        String pkgName = aggregator.getPkgName();
-        String resName = aggregator.getResName();
-
-        LOGGER.info("[" + this.getName() + "] Persisting data at OrionCKANSink (orgName=" + orgName
-                + ", pkgName=" + pkgName + ", resName=" + resName + ", data=" + aggregation + ")");
-
-        persistenceBackend.persist(orgName, pkgName, resName, aggregation, aggregator instanceof RowAggregator);
-    } // persistAggregation
 
     /**
      * Builds an organization name given a fiwareService. It throws an exception if the naming conventions are violated.
