@@ -184,9 +184,6 @@ public class NGSICKANSink extends NGSISink {
         
         // Techdebt: allow this sink to work with all the data models
         dataModel = DataModel.DMBYENTITY;
-    
-        // CKAN requires all the names written in lower case
-        enableLowercase = true;
     } // configure
 
     @Override
@@ -247,7 +244,7 @@ public class NGSICKANSink extends NGSISink {
         protected String resId;
         protected boolean lowercase;
 
-        public Aggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
+        public Aggregator(String service, String servicePath, String destination) throws Exception {
             this.records = new JsonArray();
             this.service = service;
             this.servicePath = servicePath;
@@ -263,18 +260,15 @@ public class NGSICKANSink extends NGSISink {
         } // getAggregation
 
         public String getOrgName() {
-            if (lowercase) return orgName.toLowerCase();
-            return orgName;
+            return orgName.toLowerCase();
         } // getOrgName
 
         public String getPkgName() {
-            if (lowercase) return pkgName.toLowerCase();
-            return pkgName;
+            return pkgName.toLowerCase();
         } // getPkgName
 
         public String getResName() {
-            if (lowercase) return resName.toLowerCase();
-            return resName;
+            return resName.toLowerCase();
         } // getResName
 
         public abstract void aggregate(NGSIEvent cygnusEvent) throws Exception;
@@ -286,8 +280,8 @@ public class NGSICKANSink extends NGSISink {
      */
     private class RowAggregator extends Aggregator {
 
-        public RowAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
-            super(service, servicePath, destination, lowercase);
+        public RowAggregator(String service, String servicePath, String destination) throws Exception {
+            super(service, servicePath, destination);
         } // RowAggregator
 
         @Override
@@ -396,8 +390,8 @@ public class NGSICKANSink extends NGSISink {
      */
     private class ColumnAggregator extends Aggregator {
 
-        public ColumnAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
-            super(service, servicePath, destination, lowercase);
+        public ColumnAggregator(String service, String servicePath, String destination) throws Exception {
+            super(service, servicePath, destination);
         } // ColumnAggregator
 
         @Override
@@ -458,9 +452,9 @@ public class NGSICKANSink extends NGSISink {
         String servicePath = e.getServicePath();
         String destination = e.getEntity();
         if (rowAttrPersistence) {
-            return new RowAggregator(service, servicePath, destination, enableLowercase);
+            return new RowAggregator(service, servicePath, destination);
         } else {
-            return new ColumnAggregator(service, servicePath, destination, enableLowercase);
+            return new ColumnAggregator(service, servicePath, destination);
         } // if else
     } // getAggregator
 
