@@ -208,21 +208,13 @@ public class NGSICKANSink extends NGSISink {
 
         // iterate on the destinations, for each one a single create / append will be performed
         for (String destination : batch.getDestinations()) {
-            LOGGER.debug("[" + this.getName() + "] Processing sub-batch regarding the " + destination
+            LOGGER.debug("[" + getName() + "] Processing sub-batch regarding the " + destination
                     + " destination");
 
-            // get the sub-batch for this destination
             ArrayList<NGSIEvent> subBatch = batch.getEvents(destination);
 
-            // get an aggregator for this destination and initialize it
-            Aggregator aggregator = getAggregator(this.rowAttrPersistence, subBatch.get(0));
+            getAggregator(subBatch.get(0)).persist(subBatch);
 
-            for (NGSIEvent cygnusEvent : subBatch) {
-                aggregator.aggregate(cygnusEvent);
-            } // for
-
-            // persist the aggregation
-            aggregator.persist();
             batch.setPersisted(destination);
         } // for
     } // persistBatch
@@ -262,7 +254,9 @@ public class NGSICKANSink extends NGSISink {
             return s.substring(1, s.length() - 1);
         } // getAggregation
 
-        public void persist() throws Exception {
+        public void persist(ArrayList<NGSIEvent> batch) throws Exception {
+            for (NGSIEvent cygnusEvent : batch) aggregate(cygnusEvent);
+
             String aggregation = getAggregation();
 
             LOGGER.info("[" + NGSICKANSink.this.getName() + "] Persisting data at OrionCKANSink (orgName=" + orgName
@@ -271,7 +265,27 @@ public class NGSICKANSink extends NGSISink {
             backend.persist(orgName, pkgName, resName, aggregation, create);
         } // persist
 
-        public abstract void aggregate(NGSIEvent cygnusEvent) throws Exception;
+        public void aggregate(NGSIEvent event) {
+            NotifyContextRequest.ContextElement element = event.getContextElement();
+            String entityId = element.getId();
+            String entityType = element.getType();
+            
+            LOGGER.debug("[" + getName() + "] Processing context element " + element);
+
+            ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs = element.getAttributes();
+            if (entityAttrs == null || entityAttrs.isEmpty()) {
+                LOGGER.warn("No attributes within the notified entity, nothing is done (id=" + entityId
+                        + ", entityType=" + entityType + ")");
+                return;
+            } // if
+
+            long recvTimeTs = event.getRecvTimeTs();
+            String recvTime = CommonUtils.getHumanReadable(recvTimeTs, true);
+            aggregate(recvTimeTs, recvTime, entityId, entityType, entityAttrs);
+        } // aggregate
+
+        public abstract void aggregate(long recvTimeTs, String recvTime, String entityId, String entityType,
+          ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs);
 
     } // Aggregator
 
@@ -285,31 +299,12 @@ public class NGSICKANSink extends NGSISink {
         } // RowAggregator
 
         @Override
-        public void aggregate(NGSIEvent cygnusEvent) throws Exception {
-            // get the event headers
-            long recvTimeTs = cygnusEvent.getRecvTimeTs();
-            String recvTime = CommonUtils.getHumanReadable(recvTimeTs, true);
-
-            // get the event body
-            NotifyContextRequest.ContextElement contextElement = cygnusEvent.getContextElement();
-            String entityId = contextElement.getId();
-            String entityType = contextElement.getType();
-            LOGGER.debug("[" + getName() + "] Processing context element (id=" + entityId + ", type="
-                    + entityType + ")");
-
-            // iterate on all this context element attributes, if there are attributes
-            ArrayList<NotifyContextRequest.ContextAttribute> contextAttributes = contextElement.getAttributes();
-
-            if (contextAttributes == null || contextAttributes.isEmpty()) {
-                LOGGER.warn("No attributes within the notified entity, nothing is done (id=" + entityId
-                        + ", type=" + entityType + ")");
-                return;
-            } // if
-
-            for (NotifyContextRequest.ContextAttribute contextAttribute : contextAttributes) {
+        public void aggregate(long recvTimeTs, String recvTime, String entityId, String entityType,
+          ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs) {
+            for (NotifyContextRequest.ContextAttribute contextAttribute : entityAttrs) {
                 String attrName = contextAttribute.getName();
                 String attrType = contextAttribute.getType();
-                LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", type="
+                LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", entityType="
                         + attrType + ")");
                 String attrMetadata = contextAttribute.getContextMetadata();
                 JsonElement attrValue = contextAttribute.getContextValue();
@@ -395,27 +390,8 @@ public class NGSICKANSink extends NGSISink {
         } // ColumnAggregator
 
         @Override
-        public void aggregate(NGSIEvent cygnusEvent) throws Exception {
-            // get the event headers
-            long recvTimeTs = cygnusEvent.getRecvTimeTs();
-            String recvTime = CommonUtils.getHumanReadable(recvTimeTs, true);
-
-            // get the event body
-            NotifyContextRequest.ContextElement contextElement = cygnusEvent.getContextElement();
-            String entityId = contextElement.getId();
-            String entityType = contextElement.getType();
-            LOGGER.debug("[" + getName() + "] Processing context element (id=" + entityId + ", type="
-                    + entityType + ")");
-
-            // iterate on all this context element attributes, if there are attributes
-            ArrayList<NotifyContextRequest.ContextAttribute> contextAttributes = contextElement.getAttributes();
-
-            if (contextAttributes == null || contextAttributes.isEmpty()) {
-                LOGGER.warn("No attributes within the notified entity, nothing is done (id=" + entityId
-                        + ", type=" + entityType + ")");
-                return;
-            } // if
-
+        public void aggregate(long recvTimeTs, String recvTime, String entityId, String entityType,
+          ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs) {
             JsonObject record = new JsonObject();
             record.addProperty(NGSIConstants.RECV_TIME_TS, String.valueOf(recvTimeTs / 1000));
             record.addProperty(NGSIConstants.RECV_TIME, recvTime);
@@ -423,12 +399,12 @@ public class NGSICKANSink extends NGSISink {
             record.addProperty(NGSIConstants.ENTITY_ID, entityId);
             record.addProperty(NGSIConstants.ENTITY_TYPE, entityType);
 
-            for (NotifyContextRequest.ContextAttribute contextAttribute : contextAttributes) {
+            for (NotifyContextRequest.ContextAttribute contextAttribute : entityAttrs) {
                 String attrName = contextAttribute.getName();
                 String attrType = contextAttribute.getType();
                 String attrValue = contextAttribute.getContextValue(true);
                 String attrMetadata = contextAttribute.getContextMetadata();
-                LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", type="
+                LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", entityType="
                         + attrType + ")");
 
                 // create part of the column with the current attribute (a.k.a. a column)
@@ -447,7 +423,7 @@ public class NGSICKANSink extends NGSISink {
 
     } // ColumnAggregator
 
-    private Aggregator getAggregator(boolean rowAttrPersistence, NGSIEvent e) throws Exception {
+    private Aggregator getAggregator(NGSIEvent e) throws Exception {
         String service = e.getService();
         String servicePath = e.getServicePath();
         String destination = e.getEntity();
