@@ -218,7 +218,7 @@ public class NGSICKANSink extends NGSISink {
             ArrayList<NGSIEvent> subBatch = batch.getEvents(destination);
 
             // get an aggregator for this destination and initialize it
-            CKANAggregator aggregator = getAggregator(this.rowAttrPersistence, subBatch.get(0));
+            Aggregator aggregator = getAggregator(this.rowAttrPersistence, subBatch.get(0));
 
             for (NGSIEvent cygnusEvent : subBatch) {
                 aggregator.aggregate(cygnusEvent);
@@ -233,7 +233,7 @@ public class NGSICKANSink extends NGSISink {
     /**
      * Class for aggregating fieldValues.
      */
-    private abstract class CKANAggregator {
+    private abstract class Aggregator {
 
         // string containing the data records
         protected final JsonArray records;
@@ -247,7 +247,7 @@ public class NGSICKANSink extends NGSISink {
         protected String resId;
         protected boolean lowercase;
 
-        public CKANAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
+        public Aggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
             this.records = new JsonArray();
             this.service = service;
             this.servicePath = servicePath;
@@ -255,7 +255,7 @@ public class NGSICKANSink extends NGSISink {
             this.orgName = buildOrgName(service);
             this.pkgName = buildPkgName(service, servicePath);
             this.resName = buildResName(destination);
-        } // CKANAggregator
+        } // Aggregator
 
         public String getAggregation() {
             String s = records.toString();
@@ -279,12 +279,12 @@ public class NGSICKANSink extends NGSISink {
 
         public abstract void aggregate(NGSIEvent cygnusEvent) throws Exception;
 
-    } // CKANAggregator
+    } // Aggregator
 
     /**
      * Class for aggregating batches in row mode.
      */
-    private class RowAggregator extends CKANAggregator {
+    private class RowAggregator extends Aggregator {
 
         public RowAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
             super(service, servicePath, destination, lowercase);
@@ -376,7 +376,7 @@ public class NGSICKANSink extends NGSISink {
     /**
      * Class for aggregating batches in column mode.
      */
-    private class ColumnAggregator extends CKANAggregator {
+    private class ColumnAggregator extends Aggregator {
 
         public ColumnAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
             super(service, servicePath, destination, lowercase);
@@ -435,7 +435,7 @@ public class NGSICKANSink extends NGSISink {
 
     } // ColumnAggregator
 
-    private CKANAggregator getAggregator(boolean rowAttrPersistence, NGSIEvent e) throws Exception {
+    private Aggregator getAggregator(boolean rowAttrPersistence, NGSIEvent e) throws Exception {
         String service = e.getService();
         String servicePath = e.getServicePath();
         String destination = e.getEntity();
@@ -446,7 +446,7 @@ public class NGSICKANSink extends NGSISink {
         } // if else
     } // getAggregator
 
-    private void persistAggregation(CKANAggregator aggregator) throws Exception {
+    private void persistAggregation(Aggregator aggregator) throws Exception {
         String aggregation = aggregator.getAggregation();
         String orgName = aggregator.getOrgName();
         String pkgName = aggregator.getPkgName();
