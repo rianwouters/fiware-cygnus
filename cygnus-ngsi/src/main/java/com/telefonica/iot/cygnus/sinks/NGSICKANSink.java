@@ -37,6 +37,8 @@ import org.apache.flume.Context;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 
 /**
  *
@@ -235,7 +237,7 @@ public class NGSICKANSink extends NGSISink {
     private abstract class CKANAggregator {
 
         // string containing the data records
-        protected List<String> records;
+        protected final JsonArray records;
 
         protected String service;
         protected String servicePath;
@@ -246,35 +248,27 @@ public class NGSICKANSink extends NGSISink {
         protected String resId;
 
         public CKANAggregator() {
-            records = new ArrayList<String>();
+            records = new JsonArray();
         } // CKANAggregator
 
         public String getAggregation() {
-            return String.join(",", records);
+            String s = records.toString();
+            return s.substring(1, s.length() - 1);
         } // getAggregation
 
         public String getOrgName(boolean enableLowercase) {
-            if (enableLowercase) {
-                return orgName.toLowerCase();
-            } else {
-                return orgName;
-            } // if else
+            if (enableLowercase) return orgName.toLowerCase();
+            return orgName;
         } // getOrgName
 
         public String getPkgName(boolean enableLowercase) {
-            if (enableLowercase) {
-                return pkgName.toLowerCase();
-            } else {
-                return pkgName;
-            } // if else
+            if (enableLowercase) return pkgName.toLowerCase();
+            return pkgName;
         } // getPkgName
 
         public String getResName(boolean enableLowercase) {
-            if (enableLowercase) {
-                return resName.toLowerCase();
-            } else {
-                return resName;
-            } // if else
+            if (enableLowercase) return resName.toLowerCase();
+            return resName;
         } // getResName
 
         public void initialize(NGSIEvent cygnusEvent) throws Exception {
@@ -330,42 +324,51 @@ public class NGSICKANSink extends NGSISink {
                 String attrMetadata = contextAttribute.getContextMetadata();
                 JsonElement attrValue = contextAttribute.getContextValue();
 
-                // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
-                // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
-                String metadataStr = attrMetadata.equals(CommonConstants.EMPTY_MD) ? "" : ",\"" + NGSIConstants.ATTR_MD + "\": " + attrMetadata;
-
                 if (expandJson && attrValue.isJsonObject()) {
                   JsonObject jsonValue = (JsonObject) attrValue;
                   for(Map.Entry<String, JsonElement> entry : jsonValue.entrySet()) {
                     // TODO: refactor record contruction
-                    
+                    // TODO: probably better use Gson 
                     JsonPrimitive value = (JsonPrimitive) entry.getValue();
                     String type = 
                       value.isString() ? "String" :
                       value.isBoolean() ? "Boolean" :
                       value.isNumber() ? "Number" :
                       "unknown";
-                    String name = attrName + "_" + entry.getKey(); 
-                    String record = "{\"" + NGSIConstants.RECV_TIME_TS + "\": \"" + recvTimeTs / 1000 + "\","
-                        + "\"" + NGSIConstants.RECV_TIME + "\": \"" + recvTime + "\","
-                        + "\"" + NGSIConstants.FIWARE_SERVICE_PATH + "\": \"" + servicePath + "\","
-                        + "\"" + NGSIConstants.ENTITY_ID + "\": \"" + entityId + "\","
-                        + "\"" + NGSIConstants.ENTITY_TYPE + "\": \"" + entityType + "\","
-                        + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + name + "\","
-                        + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + type + "\","
-                        + "\"" + NGSIConstants.ATTR_VALUE + "\": " + value + metadataStr + "}";
+                    String name = attrName + "_" + entry.getKey();
+
+                    JsonObject record = new JsonObject();
+                    record.addProperty(NGSIConstants.RECV_TIME_TS, String.valueOf(recvTimeTs / 1000));
+                    record.addProperty(NGSIConstants.RECV_TIME, recvTime);
+                    record.addProperty(NGSIConstants.FIWARE_SERVICE_PATH, servicePath);
+                    record.addProperty(NGSIConstants.ENTITY_ID, entityId);
+                    record.addProperty(NGSIConstants.ENTITY_TYPE, entityType);
+                    record.addProperty(NGSIConstants.ATTR_NAME, name);
+                    record.addProperty(NGSIConstants.ATTR_TYPE, type);
+                    record.add(NGSIConstants.ATTR_VALUE, value);
+                    // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
+                    // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
+                    if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
+                      record.add(NGSIConstants.ATTR_MD, new JsonParser().parse(attrMetadata));
+                    }
                     records.add(record);
                   }
                 } else {
                   // create a column and aggregate it
-                  String record = "{\"" + NGSIConstants.RECV_TIME_TS + "\": \"" + recvTimeTs / 1000 + "\","
-                      + "\"" + NGSIConstants.RECV_TIME + "\": \"" + recvTime + "\","
-                      + "\"" + NGSIConstants.FIWARE_SERVICE_PATH + "\": \"" + servicePath + "\","
-                      + "\"" + NGSIConstants.ENTITY_ID + "\": \"" + entityId + "\","
-                      + "\"" + NGSIConstants.ENTITY_TYPE + "\": \"" + entityType + "\","
-                      + "\"" + NGSIConstants.ATTR_NAME + "\": \"" + attrName + "\","
-                      + "\"" + NGSIConstants.ATTR_TYPE + "\": \"" + attrType + "\","
-                      + "\"" + NGSIConstants.ATTR_VALUE + "\": " + attrValue.toString() + metadataStr + "}";
+                  JsonObject record = new JsonObject();
+                  record.addProperty(NGSIConstants.RECV_TIME_TS, String.valueOf(recvTimeTs / 1000));
+                  record.addProperty(NGSIConstants.RECV_TIME, recvTime);
+                  record.addProperty(NGSIConstants.FIWARE_SERVICE_PATH, servicePath);
+                  record.addProperty(NGSIConstants.ENTITY_ID, entityId);
+                  record.addProperty(NGSIConstants.ENTITY_TYPE, entityType);
+                  record.addProperty(NGSIConstants.ATTR_NAME, attrName);
+                  record.addProperty(NGSIConstants.ATTR_TYPE, attrType);
+                  record.add(NGSIConstants.ATTR_VALUE, attrValue);
+                  // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
+                  // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
+                  if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
+                    record.add(NGSIConstants.ATTR_MD, new JsonParser().parse(attrMetadata));
+                  }
                   records.add(record);
                 }
 
@@ -406,10 +409,12 @@ public class NGSICKANSink extends NGSISink {
                 return;
             } // if
 
-            String record = "{\"" + NGSIConstants.RECV_TIME + "\": \"" + recvTime + "\","
-                    + "\"" + NGSIConstants.FIWARE_SERVICE_PATH + "\": \"" + servicePath + "\","
-                    + "\"" + NGSIConstants.ENTITY_ID + "\": \"" + entityId + "\","
-                    + "\"" + NGSIConstants.ENTITY_TYPE + "\": \"" + entityType + "\"";
+            JsonObject record = new JsonObject();
+            record.addProperty(NGSIConstants.RECV_TIME_TS, String.valueOf(recvTimeTs / 1000));
+            record.addProperty(NGSIConstants.RECV_TIME, recvTime);
+            record.addProperty(NGSIConstants.FIWARE_SERVICE_PATH, servicePath);
+            record.addProperty(NGSIConstants.ENTITY_ID, entityId);
+            record.addProperty(NGSIConstants.ENTITY_TYPE, entityType);
 
             for (NotifyContextRequest.ContextAttribute contextAttribute : contextAttributes) {
                 String attrName = contextAttribute.getName();
@@ -420,12 +425,12 @@ public class NGSICKANSink extends NGSISink {
                         + attrType + ")");
 
                 // create part of the column with the current attribute (a.k.a. a column)
-                record += ",\"" + attrName + "\": " + attrValue;
+                record.addProperty(attrName, attrValue);
 
                 // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
                 // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
                 if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
-                    record += ",\"" + attrName + "_md\": " + attrMetadata;
+                    record.add(attrName + "_md", new JsonParser().parse(attrMetadata));
                 } // if
             } // for
 
