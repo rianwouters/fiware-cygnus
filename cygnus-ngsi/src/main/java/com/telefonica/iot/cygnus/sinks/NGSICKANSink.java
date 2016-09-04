@@ -218,8 +218,7 @@ public class NGSICKANSink extends NGSISink {
             ArrayList<NGSIEvent> subBatch = batch.getEvents(destination);
 
             // get an aggregator for this destination and initialize it
-            CKANAggregator aggregator = getAggregator(this.rowAttrPersistence);
-            aggregator.initialize(subBatch.get(0));
+            CKANAggregator aggregator = getAggregator(this.rowAttrPersistence, subBatch.get(0));
 
             for (NGSIEvent cygnusEvent : subBatch) {
                 aggregator.aggregate(cygnusEvent);
@@ -246,9 +245,16 @@ public class NGSICKANSink extends NGSISink {
         protected String pkgName;
         protected String resName;
         protected String resId;
+        protected boolean lowercase;
 
-        public CKANAggregator() {
-            records = new JsonArray();
+        public CKANAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
+            this.records = new JsonArray();
+            this.service = service;
+            this.servicePath = servicePath;
+            this.destination = destination;
+            this.orgName = buildOrgName(service);
+            this.pkgName = buildPkgName(service, servicePath);
+            this.resName = buildResName(destination);
         } // CKANAggregator
 
         public String getAggregation() {
@@ -256,29 +262,20 @@ public class NGSICKANSink extends NGSISink {
             return s.substring(1, s.length() - 1);
         } // getAggregation
 
-        public String getOrgName(boolean enableLowercase) {
-            if (enableLowercase) return orgName.toLowerCase();
+        public String getOrgName() {
+            if (lowercase) return orgName.toLowerCase();
             return orgName;
         } // getOrgName
 
-        public String getPkgName(boolean enableLowercase) {
-            if (enableLowercase) return pkgName.toLowerCase();
+        public String getPkgName() {
+            if (lowercase) return pkgName.toLowerCase();
             return pkgName;
         } // getPkgName
 
-        public String getResName(boolean enableLowercase) {
-            if (enableLowercase) return resName.toLowerCase();
+        public String getResName() {
+            if (lowercase) return resName.toLowerCase();
             return resName;
         } // getResName
-
-        public void initialize(NGSIEvent cygnusEvent) throws Exception {
-            service = cygnusEvent.getService();
-            servicePath = cygnusEvent.getServicePath();
-            destination = cygnusEvent.getEntity();
-            orgName = buildOrgName(service);
-            pkgName = buildPkgName(service, servicePath);
-            resName = buildResName(destination);
-        } // initialize
 
         public abstract void aggregate(NGSIEvent cygnusEvent) throws Exception;
 
@@ -289,10 +286,9 @@ public class NGSICKANSink extends NGSISink {
      */
     private class RowAggregator extends CKANAggregator {
 
-        @Override
-        public void initialize(NGSIEvent cygnusEvent) throws Exception {
-            super.initialize(cygnusEvent);
-        } // initialize
+        public RowAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
+            super(service, servicePath, destination, lowercase);
+        } // RowAggregator
 
         @Override
         public void aggregate(NGSIEvent cygnusEvent) throws Exception {
@@ -382,10 +378,9 @@ public class NGSICKANSink extends NGSISink {
      */
     private class ColumnAggregator extends CKANAggregator {
 
-        @Override
-        public void initialize(NGSIEvent cygnusEvent) throws Exception {
-            super.initialize(cygnusEvent);
-        } // initialize
+        public ColumnAggregator(String service, String servicePath, String destination, boolean lowercase) throws Exception {
+            super(service, servicePath, destination, lowercase);
+        } // ColumnAggregator
 
         @Override
         public void aggregate(NGSIEvent cygnusEvent) throws Exception {
@@ -440,19 +435,22 @@ public class NGSICKANSink extends NGSISink {
 
     } // ColumnAggregator
 
-    private CKANAggregator getAggregator(boolean rowAttrPersistence) {
+    private CKANAggregator getAggregator(boolean rowAttrPersistence, NGSIEvent e) throws Exception {
+        String service = e.getService();
+        String servicePath = e.getServicePath();
+        String destination = e.getEntity();
         if (rowAttrPersistence) {
-            return new RowAggregator();
+            return new RowAggregator(service, servicePath, destination, enableLowercase);
         } else {
-            return new ColumnAggregator();
+            return new ColumnAggregator(service, servicePath, destination, enableLowercase);
         } // if else
     } // getAggregator
 
     private void persistAggregation(CKANAggregator aggregator) throws Exception {
         String aggregation = aggregator.getAggregation();
-        String orgName = aggregator.getOrgName(enableLowercase);
-        String pkgName = aggregator.getPkgName(enableLowercase);
-        String resName = aggregator.getResName(enableLowercase);
+        String orgName = aggregator.getOrgName();
+        String pkgName = aggregator.getPkgName();
+        String resName = aggregator.getResName();
 
         LOGGER.info("[" + this.getName() + "] Persisting data at OrionCKANSink (orgName=" + orgName
                 + ", pkgName=" + pkgName + ", resName=" + resName + ", data=" + aggregation + ")");
@@ -462,6 +460,9 @@ public class NGSICKANSink extends NGSISink {
 
     /**
      * Builds an organization name given a fiwareService. It throws an exception if the naming conventions are violated.
+     *
+     * TODO: should be moved into Aggregator, only here for testing purpose; better test the aggregator
+     *
      * @param fiwareService
      * @return
      * @throws Exception
