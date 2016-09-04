@@ -31,7 +31,7 @@ public interface CKANBackend {
      * @param orgName Organization name
      * @param pkgName Package/dataset name
      * @param resName Resource name
-     * @param records Recods to be added to the resource
+     * @param records Records to be added to the resource
      * @param createEnabled
      * @throws Exception
      */
