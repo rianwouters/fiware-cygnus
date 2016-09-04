@@ -771,8 +771,25 @@ public class NGSICKANSinkTest {
                   "\"entityType\":null," +
                   "\"attrName\":\"name1\"," + 
                   "\"attrType\":\"type1\"," +
-                  "\"attrValue\":\"value1\"," + 
-                  "\"attrMd\":[{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" +
+                  "\"attrValue\":\"value1\"" + 
+                "},{" +
+                  "\"recvTimeTs\":\"12\"," + 
+                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\":\"myServicePath\"," + 
+                  "\"entityId\":null," + 
+                  "\"entityType\":null," +
+                  "\"attrName\":\"name1_md_md1_name\"," + 
+                  "\"attrType\":\"md1_type\"," +
+                  "\"attrValue\":\"md1_value\"" + 
+                "},{" +
+                  "\"recvTimeTs\":\"12\"," + 
+                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\":\"myServicePath\"," + 
+                  "\"entityId\":null," + 
+                  "\"entityType\":null," +
+                  "\"attrName\":\"name1_md_md2_name\"," + 
+                  "\"attrType\":\"md2_type\"," +
+                  "\"attrValue\":\"md2_value\"" + 
                 "},{" +
                   "\"recvTimeTs\":\"12\"," + 
                   "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
@@ -781,8 +798,7 @@ public class NGSICKANSinkTest {
                   "\"entityType\":null," +
                   "\"attrName\":\"name2_p1\"," + 
                   "\"attrType\":\"String\"," +
-                  "\"attrValue\":\"v1\"," + 
-                  "\"attrMd\":[{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+                  "\"attrValue\":\"v1\"" + 
                 "},{" +
                   "\"recvTimeTs\":\"12\"," + 
                   "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
@@ -791,8 +807,25 @@ public class NGSICKANSinkTest {
                   "\"entityType\":null," +
                   "\"attrName\":\"name2_p2\"," + 
                   "\"attrType\":\"Boolean\"," +
-                  "\"attrValue\":true," + 
-                  "\"attrMd\":[{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+                  "\"attrValue\":true" + 
+                "},{" +
+                  "\"recvTimeTs\":\"12\"," + 
+                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\":\"myServicePath\"," + 
+                  "\"entityId\":null," + 
+                  "\"entityType\":null," +
+                  "\"attrName\":\"name2_md_md1_name\"," + 
+                  "\"attrType\":\"md1_type\"," +
+                  "\"attrValue\":\"md1_value\"" + 
+                "},{" +
+                  "\"recvTimeTs\":\"12\"," + 
+                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                  "\"fiwareServicePath\":\"myServicePath\"," + 
+                  "\"entityId\":null," + 
+                  "\"entityType\":null," +
+                  "\"attrName\":\"name2_md_md2_name\"," + 
+                  "\"attrType\":\"md2_type\"," +
+                  "\"attrValue\":\"md2_value\"" + 
                 "}"
               :
                 "{" +
@@ -804,7 +837,9 @@ public class NGSICKANSinkTest {
                   "\"attrName\":\"name1\"," + 
                   "\"attrType\":\"type1\"," +
                   "\"attrValue\":\"value1\"," + 
-                  "\"attrMd\":[{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" +
+                  "\"attrMd\":[" +
+                    "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                    "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" +
                 "},{" +
                   "\"recvTimeTs\":\"12\"," + 
                   "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
@@ -814,7 +849,9 @@ public class NGSICKANSinkTest {
                   "\"attrName\":\"name2\"," + 
                   "\"attrType\":\"type2\"," +
                   "\"attrValue\":{\"p1\":\"v1\",\"p2\":true}," + 
-                  "\"attrMd\":[{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}]" + 
+                  "\"attrMd\":[" +
+                    "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                    "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" + 
                 "}";
 
             System.out.println("PERSIST " + orgName + pkgName + resName + records);
@@ -833,8 +870,14 @@ public class NGSICKANSinkTest {
         md1.setName("md1_name");
         md1.setContextMetadata(new JsonPrimitive("md1_value"));
 
+        final NotifyContextRequest.ContextMetadata md2 = request.new ContextMetadata();
+        md2.setType("md2_type");
+        md2.setName("md2_name");
+        md2.setContextMetadata(new JsonPrimitive("md2_value"));
+
         final ArrayList<NotifyContextRequest.ContextMetadata> mds = new ArrayList<NotifyContextRequest.ContextMetadata>() {{
           add(md1);
+          add(md2);
         }};
 
         final NotifyContextRequest.ContextAttribute stringAttr = request.new ContextAttribute();
@@ -905,7 +948,7 @@ public class NGSICKANSinkTest {
         context.put("mysql_password", password);
         context.put("mysql_port", port);
         context.put("mysql_username", username);
-        context.put("expandJson", String.valueOf(expandJson));
+        context.put("expand_json", String.valueOf(expandJson));
         return context;
     } // createContext
     

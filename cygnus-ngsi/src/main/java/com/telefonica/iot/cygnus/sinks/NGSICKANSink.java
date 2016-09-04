@@ -168,7 +168,7 @@ public class NGSICKANSink extends NGSISink {
         }  // if else
         
         //TODO: refactor getBoolean
-        String expandJsonStr = context.getString("expandJson", "false");
+        String expandJsonStr = context.getString("expand_json", "false");
         
         if (expandJsonStr.equals("true") || expandJsonStr.equals("false")) {
             expandJson = Boolean.valueOf(expandJsonStr);
@@ -342,11 +342,6 @@ public class NGSICKANSink extends NGSISink {
                     record.addProperty(NGSIConstants.ATTR_NAME, name);
                     record.addProperty(NGSIConstants.ATTR_TYPE, type);
                     record.add(NGSIConstants.ATTR_VALUE, value);
-                    // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
-                    // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
-                    if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
-                      record.add(NGSIConstants.ATTR_MD, new JsonParser().parse(attrMetadata));
-                    }
                     records.add(record);
                   }
                 } else {
@@ -362,12 +357,35 @@ public class NGSICKANSink extends NGSISink {
                   record.add(NGSIConstants.ATTR_VALUE, attrValue);
                   // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
                   // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
-                  if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
+                  if (!expandJson && !attrMetadata.equals(CommonConstants.EMPTY_MD)) {
                     record.add(NGSIConstants.ATTR_MD, new JsonParser().parse(attrMetadata));
                   }
                   records.add(record);
                 }
 
+                if (expandJson) {
+                  // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
+                  // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
+                  JsonArray mdAttrs = (JsonArray) new JsonParser().parse(attrMetadata);
+                  for (JsonElement entry : mdAttrs) {
+                    JsonObject mdAttr = (JsonObject) entry;
+                    
+                    String name = attrName + "_md_" + mdAttr.getAsJsonPrimitive("name").getAsString();
+                    String type  = mdAttr.getAsJsonPrimitive("type").getAsString();
+                    String value  = mdAttr.getAsJsonPrimitive("value").getAsString();
+
+                    JsonObject record = new JsonObject();
+                    record.addProperty(NGSIConstants.RECV_TIME_TS, String.valueOf(recvTimeTs / 1000));
+                    record.addProperty(NGSIConstants.RECV_TIME, recvTime);
+                    record.addProperty(NGSIConstants.FIWARE_SERVICE_PATH, servicePath);
+                    record.addProperty(NGSIConstants.ENTITY_ID, entityId);
+                    record.addProperty(NGSIConstants.ENTITY_TYPE, entityType);
+                    record.addProperty(NGSIConstants.ATTR_NAME, name);
+                    record.addProperty(NGSIConstants.ATTR_TYPE, type);
+                    record.addProperty(NGSIConstants.ATTR_VALUE, value);
+                    records.add(record);
+                  }
+                }
             } // for
         } // aggregate
 
