@@ -242,7 +242,7 @@ public class NGSICKANSink extends NGSISink {
         protected String resId;
         protected boolean create;
 
-        public Aggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws Exception {
+        public Aggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
             this.records = new JsonArray();
             this.service = service;
             this.servicePath = servicePath;
@@ -298,7 +298,7 @@ public class NGSICKANSink extends NGSISink {
      */
     private class RowAggregator extends Aggregator {
 
-        public RowAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws Exception {
+        public RowAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
             super(service, servicePath, destination, backend, create);
         } // RowAggregator
 
@@ -389,7 +389,7 @@ public class NGSICKANSink extends NGSISink {
      */
     private class ColumnAggregator extends Aggregator {
 
-        public ColumnAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws Exception {
+        public ColumnAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
             super(service, servicePath, destination, backend, create);
         } // ColumnAggregator
 
@@ -427,7 +427,7 @@ public class NGSICKANSink extends NGSISink {
 
     } // ColumnAggregator
 
-    private Aggregator getAggregator(NGSIEvent e) throws Exception {
+    private Aggregator getAggregator(NGSIEvent e) throws CygnusBadConfiguration {
         String service = e.getService();
         String servicePath = e.getServicePath();
         String destination = e.getEntity();
@@ -461,7 +461,7 @@ public class NGSICKANSink extends NGSISink {
      * @return
      * @throws Exception
      */
-    public String buildOrgName(String fiwareService) throws Exception {
+    public String buildOrgName(String fiwareService) throws CygnusBadConfiguration {
         String orgName;
         
         if (enableEncoding) {
@@ -481,7 +481,7 @@ public class NGSICKANSink extends NGSISink {
      * @return
      * @throws Exception
      */
-    public String buildPkgName(String fiwareService, String fiwareServicePath) throws Exception {
+    public String buildPkgName(String fiwareService, String fiwareServicePath) throws CygnusBadConfiguration {
         String pkgName;
         
         if (enableEncoding) {
@@ -504,7 +504,7 @@ public class NGSICKANSink extends NGSISink {
      * @return
      * @throws Exception
      */
-    public String buildResName(String destination) throws Exception {
+    public String buildResName(String destination) throws CygnusBadConfiguration {
         String resName;
         
         if (enableEncoding) {
@@ -515,5 +515,6 @@ public class NGSICKANSink extends NGSISink {
 
         return checkName("resource", resName);
     } // buildResName
+
 
 } // NGSICKANSink
