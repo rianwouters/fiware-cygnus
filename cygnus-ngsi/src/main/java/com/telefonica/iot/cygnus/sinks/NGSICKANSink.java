@@ -230,7 +230,7 @@ public class NGSICKANSink extends NGSISink {
     abstract class Aggregator {
 
         // string containing the data records
-        protected final JsonArray records;
+        protected JsonArray records;
 
         protected CKANBackend backend;
         protected String service;
@@ -242,7 +242,7 @@ public class NGSICKANSink extends NGSISink {
         protected String resId;
         protected boolean create;
 
-        public Aggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
+        public Aggregator initialize(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
             this.records = new JsonArray();
             this.service = service;
             this.servicePath = servicePath;
@@ -252,7 +252,8 @@ public class NGSICKANSink extends NGSISink {
             this.orgName = buildOrgName(service).toLowerCase();
             this.pkgName = buildPkgName(service, servicePath).toLowerCase();
             this.resName = buildResName(destination).toLowerCase();
-        } // Aggregator
+            return this;
+        } // initialize
 
         public String getAggregation() {
             String s = records.toString();
@@ -297,10 +298,6 @@ public class NGSICKANSink extends NGSISink {
      * Class for aggregating batches in row mode.
      */
     private class RowAggregator extends Aggregator {
-
-        public RowAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
-            super(service, servicePath, destination, backend, create);
-        } // RowAggregator
 
         @Override
         public void aggregate(long recvTimeTs, String recvTime, String entityId, String entityType,
@@ -389,10 +386,6 @@ public class NGSICKANSink extends NGSISink {
      */
     private class ColumnAggregator extends Aggregator {
 
-        public ColumnAggregator(String service, String servicePath, String destination, CKANBackend backend, boolean create) throws CygnusBadConfiguration {
-            super(service, servicePath, destination, backend, create);
-        } // ColumnAggregator
-
         @Override
         public void aggregate(long recvTimeTs, String recvTime, String entityId, String entityType,
           ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs) {
@@ -428,28 +421,17 @@ public class NGSICKANSink extends NGSISink {
     } // ColumnAggregator
 
     private Aggregator getAggregator(NGSIEvent e) throws CygnusBadConfiguration {
-        String service = e.getService();
-        String servicePath = e.getServicePath();
-        String destination = e.getEntity();
-        if (rowAttrPersistence) {
-            return new RowAggregator(service, servicePath, destination, persistenceBackend, true);
-        } else {
-            return new ColumnAggregator(service, servicePath, destination, persistenceBackend, false);
-        } // if else
+        return (rowAttrPersistence ? new RowAggregator() : new ColumnAggregator())
+            .initialize(e.getService(), e.getServicePath(), e.getEntity(), persistenceBackend, rowAttrPersistence);
     } // getAggregator
 
-
     private String checkName(String name, String s) throws CygnusBadConfiguration {
+        if (s.length() > NGSIConstants.CKAN_MAX_NAME_LEN)
+            throw new CygnusBadConfiguration("Length of " + name + " name '" + s + "' exceeds " + NGSIConstants.CKAN_MAX_NAME_LEN);
 
-        if (s.length() > NGSIConstants.CKAN_MAX_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building " + name + " name '" + s + "' and its length is "
-                    + "greater than " + NGSIConstants.CKAN_MAX_NAME_LEN);
-        } // if
+        if (s.length() < NGSIConstants.CKAN_MIN_NAME_LEN)
+            throw new CygnusBadConfiguration("Length of " + name + " name '" + s + "' lower than " + NGSIConstants.CKAN_MIN_NAME_LEN);
 
-        if (s.length() < NGSIConstants.CKAN_MIN_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building " + name + " name '" + s + "' and its length is "
-                    + "lower than " + NGSIConstants.CKAN_MIN_NAME_LEN);
-        } // if
         return s;
     }
 
@@ -462,14 +444,7 @@ public class NGSICKANSink extends NGSISink {
      * @throws Exception
      */
     public String buildOrgName(String fiwareService) throws CygnusBadConfiguration {
-        String orgName;
-        
-        if (enableEncoding) {
-            orgName = NGSICharsets.encodeCKAN(fiwareService);
-        } else {
-            orgName = NGSIUtils.encode(fiwareService, false, true);
-        } // if else
-
+        String orgName = enableEncoding ? NGSICharsets.encodeCKAN(fiwareService) : NGSIUtils.encode(fiwareService, false, true);
         return checkName("organization", orgName);
     } // buildOrgName
 
@@ -482,19 +457,9 @@ public class NGSICKANSink extends NGSISink {
      * @throws Exception
      */
     public String buildPkgName(String fiwareService, String fiwareServicePath) throws CygnusBadConfiguration {
-        String pkgName;
-        
-        if (enableEncoding) {
-            pkgName = NGSICharsets.encodeCKAN(fiwareService) + NGSICharsets.encodeCKAN(fiwareServicePath);
-        } else {
-            if (fiwareServicePath.equals("/")) {
-                pkgName = NGSIUtils.encode(fiwareService, false, true);
-            } else {
-                pkgName = NGSIUtils.encode(fiwareService, false, true)
-                        + NGSIUtils.encode(fiwareServicePath, false, true);
-            } // if else
-        } // if else
-
+        String pkgName = enableEncoding ? NGSICharsets.encodeCKAN(fiwareService) + NGSICharsets.encodeCKAN(fiwareServicePath) :
+          fiwareServicePath.equals("/") ? NGSIUtils.encode(fiwareService, false, true) :
+            NGSIUtils.encode(fiwareService, false, true) + NGSIUtils.encode(fiwareServicePath, false, true);
         return checkName("package", pkgName);
     } // buildPkgName
 
@@ -505,14 +470,7 @@ public class NGSICKANSink extends NGSISink {
      * @throws Exception
      */
     public String buildResName(String destination) throws CygnusBadConfiguration {
-        String resName;
-        
-        if (enableEncoding) {
-            resName = NGSICharsets.encodeCKAN(destination);
-        } else {
-            resName = NGSIUtils.encode(destination, false, true);
-        } // if else
-
+        String resName = enableEncoding ? NGSICharsets.encodeCKAN(destination) :NGSIUtils.encode(destination, false, true);
         return checkName("resource", resName);
     } // buildResName
 
