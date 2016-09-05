@@ -18,6 +18,7 @@
 
 package com.telefonica.iot.cygnus.sinks;
 
+import org.apache.flume.conf.ConfigurationException;
 import com.telefonica.iot.cygnus.backends.ckan.CKANBackendImpl;
 import com.telefonica.iot.cygnus.backends.ckan.CKANBackend;
 import com.telefonica.iot.cygnus.containers.NotifyContextRequest;
@@ -147,12 +148,9 @@ public class NGSICKANSink extends NGSISink {
         
         if (attrPersistenceStr.equals("row") || attrPersistenceStr.equals("column")) {
             rowAttrPersistence = attrPersistenceStr.equals("row");
-            logger.debug("Reading configuration (attr_persistence="
-                + attrPersistenceStr + ")");
+            logger.debug("Attribute persistence set to " + attrPersistenceStr);
         } else {
-            invalidConfiguration = true;
-            logger.debug("Invalid configuration (attr_persistence="
-                + attrPersistenceStr + ") -- Must be 'row' or 'column'");
+            throw new ConfigurationException("Attribute persistence must be \"row\" or \"column\" (attr_persistence=" + attrPersistenceStr + ")");
         }  // if else
 
         String sslStr = context.getString("ssl", "false");

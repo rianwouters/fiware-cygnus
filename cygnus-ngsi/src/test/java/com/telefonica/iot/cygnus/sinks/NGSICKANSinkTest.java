@@ -19,6 +19,7 @@
 package com.telefonica.iot.cygnus.sinks;
 
 import static org.junit.Assert.*; // this is required by "fail" like assertions
+import org.apache.flume.conf.ConfigurationException;
 import com.telefonica.iot.cygnus.containers.NotifyContextRequest;
 import com.telefonica.iot.cygnus.backends.ckan.CKANBackend;
 import com.telefonica.iot.cygnus.errors.CygnusBadConfiguration;
@@ -205,17 +206,17 @@ public class NGSICKANSinkTest {
         String port = null; // default
         String username = null; // default
         NGSICKANSink sink = new NGSICKANSink();
-        sink.configure(createContext(attrPersistence, batchSize, batchTime, batchTTL, dataModel, enableEncoding,
-                enableGrouping, enableLowercase, host, password, port, username));
         
         try {
-            assertTrue(sink.getInvalidConfiguration());
+            sink.configure(createContext(attrPersistence, batchSize, batchTime, batchTTL, dataModel, enableEncoding,
+                    enableGrouping, enableLowercase, host, password, port, username));
+            assertFalse(true);
+            System.out.println(getTestTraceHead("[NGSICKANSink.configure]")
+                    + "-  FAIL  - 'attr_persistence=fila' admitted");
+        } catch (ConfigurationException e) {
             System.out.println(getTestTraceHead("[NGSICKANSink.configure]")
                     + "-  OK  - 'attr_persistence=fila' was detected");
-        } catch (AssertionError e) {
-            System.out.println(getTestTraceHead("[NGSICKANSink.configure]")
-                    + "- FAIL - 'attr_persistence=fila' was not detected");
-            throw e;
+            assertTrue(true);
         } // try catch
     } // testConfigureAttrPersistence
     
