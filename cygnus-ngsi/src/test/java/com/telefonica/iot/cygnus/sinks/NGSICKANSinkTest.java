@@ -21,6 +21,7 @@ package com.telefonica.iot.cygnus.sinks;
 import static org.junit.Assert.*; // this is required by "fail" like assertions
 import com.telefonica.iot.cygnus.containers.NotifyContextRequest;
 import com.telefonica.iot.cygnus.backends.ckan.CKANBackend;
+import com.telefonica.iot.cygnus.errors.CygnusBadConfiguration;
 import static com.telefonica.iot.cygnus.utils.CommonUtilsForTests.getTestTraceHead;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -476,8 +477,8 @@ public class NGSICKANSinkTest {
     @Test
     public void testBuildPkgNameRootServicePathEncoding() throws Exception {
         System.out.println(getTestTraceHead("[NGSICKANSink.buildPkgName]")
-                + "-------- When encoding and when using a notified/defaulted root service path, the pkg name is "
-                + "equals to the encoding of the concatenation of the notified/defaulted service and the "
+                + "-------- When encoding and when using a notified/defaulted root service path, the pkg name "
+                + "equals the encoding of the concatenation of the notified/defaulted service and the "
                 + "notified/defaulted service path");
         String attrPersistence = null; // default
         String batchSize = null; // default
@@ -646,7 +647,7 @@ public class NGSICKANSinkTest {
             System.out.println(getTestTraceHead("[NGSICKANSink.buildOrgName]")
                     + "- FAIL - An organization name length greater than 100 characters has not been detected");
             assertTrue(false);
-        } catch (Exception e) {
+        } catch (CygnusBadConfiguration e) {
             assertTrue(true);
             System.out.println(getTestTraceHead("[NGSICKANSink.buildOrgName]")
                     + "-  OK  - An organization name length greater than 100 characters has been detected");
@@ -686,7 +687,7 @@ public class NGSICKANSinkTest {
             System.out.println(getTestTraceHead("[NGSICKANSink.buildPkgName]")
                     + "- FAIL - A package name length greater than 100 characters has not been detected");
             assertTrue(false);
-        } catch (Exception e) {
+        } catch (CygnusBadConfiguration e) {
             assertTrue(true);
             System.out.println(getTestTraceHead("[NGSICKANSink.buildPkgName]")
                     + "-  OK  - A package name length greater than 100 characters has been detected");
@@ -724,7 +725,7 @@ public class NGSICKANSinkTest {
             System.out.println(getTestTraceHead("[NGSICKANSink.buildResName]")
                     + "- FAIL - A resource name length greater than 100 characters has not been detected");
             assertTrue(false);
-        } catch (Exception e) {
+        } catch (CygnusBadConfiguration e) {
             assertTrue(true);
             System.out.println(getTestTraceHead("[NGSICKANSink.buildResName]")
                     + "-  OK  - A resource name length greater than 100 characters has been detected");
