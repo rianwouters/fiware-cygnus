@@ -768,7 +768,7 @@ public class NGSICKANSinkTest {
           throws Exception {
             final String expectedRecords = expandJson
               ? 
-                "{" +
+                "[{" +
                   "\"recvTimeTs\":\"12\"," + 
                   "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
                   "\"fiwareServicePath\":\"myServicePath\"," + 
@@ -831,9 +831,9 @@ public class NGSICKANSinkTest {
                   "\"attrName\":\"name2_md_md2_name\"," + 
                   "\"attrType\":\"md2_type\"," +
                   "\"attrValue\":\"md2_value\"" + 
-                "}"
+                "}]"
               :
-                "{" +
+                "[{" +
                   "\"recvTimeTs\":\"12\"," + 
                   "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
                   "\"fiwareServicePath\":\"myServicePath\"," + 
@@ -857,7 +857,7 @@ public class NGSICKANSinkTest {
                   "\"attrMd\":[" +
                     "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
                     "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" + 
-                "}";
+                "}]";
 
             assertEquals(expectedRecords, records);
           }

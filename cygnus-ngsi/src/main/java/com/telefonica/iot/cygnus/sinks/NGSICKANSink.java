@@ -256,8 +256,7 @@ public class NGSICKANSink extends NGSISink {
         } // initialize
 
         public String getAggregation() {
-            String s = records.toString();
-            return s.substring(1, s.length() - 1);
+            return records.toString();
         } // getAggregation
 
         public void persist(ArrayList<NGSIEvent> batch) throws Exception {
