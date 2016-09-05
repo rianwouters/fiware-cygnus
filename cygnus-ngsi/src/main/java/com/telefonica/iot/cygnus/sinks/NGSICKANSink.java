@@ -59,6 +59,11 @@ public class NGSICKANSink extends NGSISink {
     private boolean expandJson;
     private CKANBackend persistenceBackend;
 
+    private void DEBUG(String msg) { LOGGER.debug("[" + getName() + "] " + msg); }
+    private void ERROR(String msg) { LOGGER.error("[" + getName() + "] " + msg); }
+    private void WARN(String msg) { LOGGER.warn("[" + getName() + "] " + msg); }
+    private void INFO(String msg) { LOGGER.info("[" + getName() + "] " + msg); }
+
     /**
      * Constructor.
      */
@@ -127,31 +132,31 @@ public class NGSICKANSink extends NGSISink {
     @Override
     public void configure(Context context) {
         apiKey = context.getString("api_key", "nokey");
-        LOGGER.debug("[" + this.getName() + "] Reading configuration (api_key=" + apiKey + ")");
+        DEBUG("Reading configuration (api_key=" + apiKey + ")");
         ckanHost = context.getString("ckan_host", "localhost");
-        LOGGER.debug("[" + this.getName() + "] Reading configuration (ckan_host=" + ckanHost + ")");
+        DEBUG("Reading configuration (ckan_host=" + ckanHost + ")");
         ckanPort = context.getString("ckan_port", "80");
         int intPort = Integer.parseInt(ckanPort);
 
         if ((intPort <= 0) || (intPort > 65535)) {
             invalidConfiguration = true;
-            LOGGER.debug("[" + this.getName() + "] Invalid configuration (ckan_port=" + ckanPort + ")"
+            DEBUG("Invalid configuration (ckan_port=" + ckanPort + ")"
                     + " -- Must be between 0 and 65535");
         } else {
-            LOGGER.debug("[" + this.getName() + "] Reading configuration (ckan_port=" + ckanPort + ")");
+            DEBUG("Reading configuration (ckan_port=" + ckanPort + ")");
         }  // if else
 
         orionUrl = context.getString("orion_url", "http://localhost:1026");
-        LOGGER.debug("[" + this.getName() + "] Reading configuration (orion_url=" + orionUrl + ")");
+        DEBUG("Reading configuration (orion_url=" + orionUrl + ")");
         String attrPersistenceStr = context.getString("attr_persistence", "row");
         
         if (attrPersistenceStr.equals("row") || attrPersistenceStr.equals("column")) {
             rowAttrPersistence = attrPersistenceStr.equals("row");
-            LOGGER.debug("[" + this.getName() + "] Reading configuration (attr_persistence="
+            DEBUG("Reading configuration (attr_persistence="
                 + attrPersistenceStr + ")");
         } else {
             invalidConfiguration = true;
-            LOGGER.debug("[" + this.getName() + "] Invalid configuration (attr_persistence="
+            DEBUG("Invalid configuration (attr_persistence="
                 + attrPersistenceStr + ") -- Must be 'row' or 'column'");
         }  // if else
 
@@ -159,11 +164,11 @@ public class NGSICKANSink extends NGSISink {
         
         if (sslStr.equals("true") || sslStr.equals("false")) {
             ssl = Boolean.valueOf(sslStr);
-            LOGGER.debug("[" + this.getName() + "] Reading configuration (ssl="
+            DEBUG("Reading configuration (ssl="
                 + sslStr + ")");
         } else  {
             invalidConfiguration = true;
-            LOGGER.debug("[" + this.getName() + "] Invalid configuration (ssl="
+            DEBUG("Invalid configuration (ssl="
                 + sslStr + ") -- Must be 'true' or 'false'");
         }  // if else
         
@@ -172,11 +177,11 @@ public class NGSICKANSink extends NGSISink {
         
         if (expandJsonStr.equals("true") || expandJsonStr.equals("false")) {
             expandJson = Boolean.valueOf(expandJsonStr);
-            LOGGER.debug("[" + this.getName() + "] Reading configuration (expandJson="
+            DEBUG("Reading configuration (expandJson="
                 + expandJsonStr + ")");
         } else  {
             invalidConfiguration = true;
-            LOGGER.debug("[" + this.getName() + "] Invalid configuration (expandJson="
+            DEBUG("Invalid configuration (expandJson="
                 + expandJsonStr + ") -- Must be 'true' or 'false'");
         }  // if else
 
@@ -190,10 +195,9 @@ public class NGSICKANSink extends NGSISink {
     public void start() {
         try {
             persistenceBackend = new CKANBackendImpl(apiKey, ckanHost, ckanPort, orionUrl, ssl);
-            LOGGER.debug("[" + this.getName() + "] CKAN persistence backend created");
+            DEBUG("CKAN persistence backend created");
         } catch (Exception e) {
-            LOGGER.error("Error while creating the CKAN persistence backend. Details="
-                    + e.getMessage());
+            ERROR("Error while creating the CKAN persistence backend. Details=" + e.getMessage());
         } // try catch
 
         super.start();
@@ -202,13 +206,13 @@ public class NGSICKANSink extends NGSISink {
     @Override
     void persistBatch(NGSIBatch batch) throws Exception {
         if (batch == null) {
-            LOGGER.debug("[" + this.getName() + "] Null batch, nothing to do");
+            DEBUG("Null batch, nothing to do");
             return;
         } // if
 
         // iterate on the destinations, for each one a single create / append will be performed
         for (String destination : batch.getDestinations()) {
-            LOGGER.debug("[" + getName() + "] Processing sub-batch regarding the " + destination
+            DEBUG("Processing sub-batch regarding the " + destination
                     + " destination");
 
             ArrayList<NGSIEvent> subBatch = batch.getEvents(destination);
@@ -259,23 +263,22 @@ public class NGSICKANSink extends NGSISink {
 
             String aggregation = getAggregation();
 
-            LOGGER.info("[" + NGSICKANSink.this.getName() + "] Persisting data at OrionCKANSink (orgName=" + orgName
-                    + ", pkgName=" + pkgName + ", resName=" + resName + ", data=" + aggregation + ")");
+            INFO("Persisting data at OrionCKANSink (orgName=" + orgName + ", pkgName=" +
+                pkgName + ", resName=" + resName + ", data=" + aggregation + ")");
 
             backend.persist(orgName, pkgName, resName, aggregation, create);
         } // persist
 
         public void aggregate(NGSIEvent event) {
-            NotifyContextRequest.ContextElement element = event.getContextElement();
-            String entityId = element.getId();
-            String entityType = element.getType();
+            NotifyContextRequest.ContextElement entity = event.getContextElement();
+            String entityId = entity.getId();
+            String entityType = entity.getType();
             
-            LOGGER.debug("[" + getName() + "] Processing context element " + element);
+            DEBUG("Processing context entity " + entity);
 
-            ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs = element.getAttributes();
+            ArrayList<NotifyContextRequest.ContextAttribute> entityAttrs = entity.getAttributes();
             if (entityAttrs == null || entityAttrs.isEmpty()) {
-                LOGGER.warn("No attributes within the notified entity, nothing is done (id=" + entityId
-                        + ", entityType=" + entityType + ")");
+                WARN("No attributes within the notified entity, nothing is done (entity=" + entity + ")");
                 return;
             } // if
 
@@ -304,7 +307,7 @@ public class NGSICKANSink extends NGSISink {
             for (NotifyContextRequest.ContextAttribute contextAttribute : entityAttrs) {
                 String attrName = contextAttribute.getName();
                 String attrType = contextAttribute.getType();
-                LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", entityType="
+                DEBUG("Processing context attribute (name=" + attrName + ", entityType="
                         + attrType + ")");
                 String attrMetadata = contextAttribute.getContextMetadata();
                 JsonElement attrValue = contextAttribute.getContextValue();
@@ -404,7 +407,7 @@ public class NGSICKANSink extends NGSISink {
                 String attrType = contextAttribute.getType();
                 String attrValue = contextAttribute.getContextValue(true);
                 String attrMetadata = contextAttribute.getContextMetadata();
-                LOGGER.debug("[" + getName() + "] Processing context attribute (name=" + attrName + ", entityType="
+                DEBUG("Processing context attribute (name=" + attrName + ", entityType="
                         + attrType + ")");
 
                 // create part of the column with the current attribute (a.k.a. a column)
