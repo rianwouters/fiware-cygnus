@@ -211,6 +211,7 @@ public class NGSICKANSink extends NGSISink {
         } // if
 
         // iterate on the destinations, for each one a single create / append will be performed
+        // TODO: assumes each destination has a uniq organisation and package name; is this true?
         for (String destination : batch.getDestinations()) {
             DEBUG("Processing sub-batch regarding the " + destination
                     + " destination");
