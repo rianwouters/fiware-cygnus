@@ -733,13 +733,18 @@ public class NGSICKANSinkTest {
 
 
     @Test
-    public void testPersistBatch() throws Exception {
+    public void testPersistBatchDoNotExpandJson() throws Exception {
       testPersistBatch(false);
+    };
+
+
+    @Test
+    public void testPersistBatchExpandJson() throws Exception {
       testPersistBatch(true);
     }
 
     private void testPersistBatch(final boolean expandJson) throws Exception {
-        String th = getTestTraceHead("[NGSICKANSink.persistBatch]");
+        String th = getTestTraceHead("[NGSICKANSink.persistBatch expandJson=" + expandJson + "]");
         System.out.println(th + "-------- A batch must be peristed correctly");
         String attrPersistence = null; // default
         String batchSize = null; // default
