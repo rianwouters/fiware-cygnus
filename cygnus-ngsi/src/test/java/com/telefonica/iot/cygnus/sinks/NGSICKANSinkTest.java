@@ -859,8 +859,6 @@ public class NGSICKANSinkTest {
                     "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" + 
                 "}";
 
-            System.out.println("PERSIST " + orgName + pkgName + resName + records);
-
             assertEquals(expectedRecords, records);
           }
         };
