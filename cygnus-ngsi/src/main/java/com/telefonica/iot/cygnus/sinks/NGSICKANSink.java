@@ -227,7 +227,7 @@ public class NGSICKANSink extends NGSISink {
     /**
      * Class for aggregating fieldValues.
      */
-    private abstract class Aggregator {
+    abstract class Aggregator {
 
         // string containing the data records
         protected final JsonArray records;
@@ -438,10 +438,24 @@ public class NGSICKANSink extends NGSISink {
         } // if else
     } // getAggregator
 
+
+    private String checkName(String name, String s) throws CygnusBadConfiguration {
+
+        if (s.length() > NGSIConstants.CKAN_MAX_NAME_LEN) {
+            throw new CygnusBadConfiguration("Building " + name + " name '" + s + "' and its length is "
+                    + "greater than " + NGSIConstants.CKAN_MAX_NAME_LEN);
+        } // if
+
+        if (s.length() < NGSIConstants.CKAN_MIN_NAME_LEN) {
+            throw new CygnusBadConfiguration("Building " + name + " name '" + s + "' and its length is "
+                    + "lower than " + NGSIConstants.CKAN_MIN_NAME_LEN);
+        } // if
+        return s;
+    }
+
     /**
      * Builds an organization name given a fiwareService. It throws an exception if the naming conventions are violated.
      *
-     * TODO: should be moved into Aggregator, only here for testing purpose; better test the aggregator
      *
      * @param fiwareService
      * @return
@@ -456,15 +470,7 @@ public class NGSICKANSink extends NGSISink {
             orgName = NGSIUtils.encode(fiwareService, false, true);
         } // if else
 
-        if (orgName.length() > NGSIConstants.CKAN_MAX_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building organization name '" + orgName + "' and its length is "
-                    + "greater than " + NGSIConstants.CKAN_MAX_NAME_LEN);
-        } else if (orgName.length() < NGSIConstants.CKAN_MIN_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building organization name '" + orgName + "' and its length is "
-                    + "lower than " + NGSIConstants.CKAN_MIN_NAME_LEN);
-        } // if else if
-            
-        return orgName;
+        return checkName("organization", orgName);
     } // buildOrgName
 
     /**
@@ -489,15 +495,7 @@ public class NGSICKANSink extends NGSISink {
             } // if else
         } // if else
 
-        if (pkgName.length() > NGSIConstants.CKAN_MAX_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building package name '" + pkgName + "' and its length is "
-                    + "greater than " + NGSIConstants.CKAN_MAX_NAME_LEN);
-        } else if (pkgName.length() < NGSIConstants.CKAN_MIN_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building package name '" + pkgName + "' and its length is "
-                    + "lower than " + NGSIConstants.CKAN_MIN_NAME_LEN);
-        } // if else if
-
-        return pkgName;
+        return checkName("package", pkgName);
     } // buildPkgName
 
     /**
@@ -515,15 +513,7 @@ public class NGSICKANSink extends NGSISink {
             resName = NGSIUtils.encode(destination, false, true);
         } // if else
 
-        if (resName.length() > NGSIConstants.CKAN_MAX_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building resource name '" + resName + "' and its length is "
-                    + "greater than " + NGSIConstants.CKAN_MAX_NAME_LEN);
-        } else if (resName.length() < NGSIConstants.CKAN_MIN_NAME_LEN) {
-            throw new CygnusBadConfiguration("Building resource name '" + resName + "' and its length is "
-                    + "lower than " + NGSIConstants.CKAN_MIN_NAME_LEN);
-        } // if else if
-
-        return resName;
+        return checkName("resource", resName);
     } // buildResName
 
 } // NGSICKANSink
