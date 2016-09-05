@@ -58,7 +58,7 @@ public class NGSIBatch {
     } // getEvents
     
     /**
-     * Adds an event to a sub-barch, given its destination.
+     * Adds an event to a sub-batch, given its destination.
      * @param destination
      * @param event
      */
