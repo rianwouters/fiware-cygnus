@@ -866,15 +866,12 @@ public class NGSICKANSinkTest {
                     "\"entityId\":null," + 
                     "\"entityType\":null," +
                     "\"name1\":\"value1\"," +
-                    "\"name1_md\":[" +
-                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
-                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}" + 
-                    "]," +
-                    "\"name2\":{\"p1\":\"v1\",\"p2\":true}," +
-                    "\"name2_md\":[" +
-                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
-                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}" +
-                    "]" +
+                    "\"name1_md_md1_name\":\"md1_value\"," +
+                    "\"name1_md_md2_name\":\"md2_value\"," +
+                    "\"name2_p1\":\"v1\"," +
+                    "\"name2_p2\":true," +
+                    "\"name2_md_md1_name\":\"md1_value\"," +
+                    "\"name2_md_md2_name\":\"md2_value\"" +
                   "}]"
                 :
                   "[{" +

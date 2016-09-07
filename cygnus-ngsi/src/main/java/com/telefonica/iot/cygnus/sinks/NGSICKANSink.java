@@ -392,17 +392,38 @@ public class NGSICKANSink extends NGSISink {
                 String attrType = contextAttribute.getType();
                 JsonElement attrValue = contextAttribute.getContextValue();
                 String attrMetadata = contextAttribute.getContextMetadata();
-                logger.debug("Processing context attribute (name=" + attrName + ", entityType="
-                        + attrType + ")");
+                logger.debug("Processing context attribute (name=" + attrName + ", entityType=" + attrType + ")");
 
-                // create part of the column with the current attribute (a.k.a. a column)
-                record.add(attrName, attrValue);
+                if (expandJson && attrValue.isJsonObject()) {
+                  JsonObject jsonValue = (JsonObject) attrValue;
+                  for(Map.Entry<String, JsonElement> entry : jsonValue.entrySet()) {
+                    // TODO: refactor record contruction
+                    // TODO: probably better use Gson 
+                    JsonPrimitive value = (JsonPrimitive) entry.getValue();
+                    String name = attrName + "_" + entry.getKey();
+                    record.add(name, value);
+                  }
+                } else {
+                  // create part of the column with the current attribute (a.k.a. a column)
+                  record.add(attrName, attrValue);
+                }
 
                 // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
                 // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
-                if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
-                    record.add(attrName + "_md", new JsonParser().parse(attrMetadata));
-                } // if
+                if (expandJson) {
+                  JsonArray mdAttrs = (JsonArray) new JsonParser().parse(attrMetadata);
+                  for (JsonElement entry : mdAttrs) {
+                    JsonObject mdAttr = (JsonObject) entry;
+                    
+                    String name = attrName + "_md_" + mdAttr.getAsJsonPrimitive("name").getAsString();
+                    String value  = mdAttr.getAsJsonPrimitive("value").getAsString();
+                    record.addProperty(name, value);
+                  }
+                } else {
+                  if (!attrMetadata.equals(CommonConstants.EMPTY_MD)) {
+                      record.add(attrName + "_md", new JsonParser().parse(attrMetadata));
+                  } // if
+                }
             } // for
 
             // now, aggregate the column
