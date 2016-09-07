@@ -735,20 +735,16 @@ public class NGSICKANSinkTest {
 
 
     @Test
-    public void testPersistBatchDoNotExpandJson() throws Exception {
-      testPersistBatch(false);
-    };
-
-
-    @Test
-    public void testPersistBatchExpandJson() throws Exception {
-      testPersistBatch(true);
+    public void testPersistBatch() throws Exception {
+      testPersistBatch("row", false);
+      testPersistBatch("row", true);
+      testPersistBatch("column", false);
+      testPersistBatch("column", true);
     }
 
-    private void testPersistBatch(final boolean expandJson) throws Exception {
-        String th = getTestTraceHead("[NGSICKANSink.persistBatch expandJson=" + expandJson + "]");
+    private void testPersistBatch(final String attrPersistence, final boolean expandJson) throws Exception {
+        String th = getTestTraceHead("[NGSICKANSink.persistBatch(attrPersistence=" + attrPersistence + " expandJson=" + expandJson + ")]");
         System.out.println(th + "-------- A batch must be peristed correctly");
-        String attrPersistence = null; // default
         String batchSize = null; // default
         String batchTime = null; // default
         String batchTTL = null; // default
@@ -768,99 +764,136 @@ public class NGSICKANSinkTest {
         CKANBackend backend = new CKANBackend() {
           public void persist(String orgName, String pkgName, String resName, String records, boolean createEnabled)
           throws Exception {
-            final String expectedRecords = expandJson
-              ? 
-                "[{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name1\"," + 
-                  "\"attrType\":\"type1\"," +
-                  "\"attrValue\":\"value1\"" + 
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name1_md_md1_name\"," + 
-                  "\"attrType\":\"md1_type\"," +
-                  "\"attrValue\":\"md1_value\"" + 
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name1_md_md2_name\"," + 
-                  "\"attrType\":\"md2_type\"," +
-                  "\"attrValue\":\"md2_value\"" + 
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name2_p1\"," + 
-                  "\"attrType\":\"String\"," +
-                  "\"attrValue\":\"v1\"" + 
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name2_p2\"," + 
-                  "\"attrType\":\"Boolean\"," +
-                  "\"attrValue\":true" + 
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name2_md_md1_name\"," + 
-                  "\"attrType\":\"md1_type\"," +
-                  "\"attrValue\":\"md1_value\"" + 
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name2_md_md2_name\"," + 
-                  "\"attrType\":\"md2_type\"," +
-                  "\"attrValue\":\"md2_value\"" + 
-                "}]"
-              :
-                "[{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name1\"," + 
-                  "\"attrType\":\"type1\"," +
-                  "\"attrValue\":\"value1\"," + 
-                  "\"attrMd\":[" +
-                    "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
-                    "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" +
-                "},{" +
-                  "\"recvTimeTs\":\"12\"," + 
-                  "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
-                  "\"fiwareServicePath\":\"myServicePath\"," + 
-                  "\"entityId\":null," + 
-                  "\"entityType\":null," +
-                  "\"attrName\":\"name2\"," + 
-                  "\"attrType\":\"type2\"," +
-                  "\"attrValue\":{\"p1\":\"v1\",\"p2\":true}," + 
-                  "\"attrMd\":[" +
-                    "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
-                    "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" + 
-                "}]";
-
+            final String expectedRecords = 
+              "row".equals(attrPersistence) ?
+                expandJson ? 
+                  "[{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name1\"," + 
+                    "\"attrType\":\"type1\"," +
+                    "\"attrValue\":\"value1\"" + 
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name1_md_md1_name\"," + 
+                    "\"attrType\":\"md1_type\"," +
+                    "\"attrValue\":\"md1_value\"" + 
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name1_md_md2_name\"," + 
+                    "\"attrType\":\"md2_type\"," +
+                    "\"attrValue\":\"md2_value\"" + 
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name2_p1\"," + 
+                    "\"attrType\":\"String\"," +
+                    "\"attrValue\":\"v1\"" + 
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name2_p2\"," + 
+                    "\"attrType\":\"Boolean\"," +
+                    "\"attrValue\":true" + 
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name2_md_md1_name\"," + 
+                    "\"attrType\":\"md1_type\"," +
+                    "\"attrValue\":\"md1_value\"" + 
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name2_md_md2_name\"," + 
+                    "\"attrType\":\"md2_type\"," +
+                    "\"attrValue\":\"md2_value\"" + 
+                  "}]"
+                :
+                  "[{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name1\"," + 
+                    "\"attrType\":\"type1\"," +
+                    "\"attrValue\":\"value1\"," + 
+                    "\"attrMd\":[" +
+                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" +
+                  "},{" +
+                    "\"recvTimeTs\":\"12\"," + 
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," + 
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"attrName\":\"name2\"," + 
+                    "\"attrType\":\"type2\"," +
+                    "\"attrValue\":{\"p1\":\"v1\",\"p2\":true}," + 
+                    "\"attrMd\":[" +
+                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}]" + 
+                  "}]"
+               :
+                expandJson ? 
+                  "[{" +
+                    "\"recvTimeTs\":\"12\"," +
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," +
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"name1\":\"value1\"," +
+                    "\"name1_md\":[" +
+                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}" + 
+                    "]," +
+                    "\"name2\":{\"p1\":\"v1\",\"p2\":true}," +
+                    "\"name2_md\":[" +
+                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}" +
+                    "]" +
+                  "}]"
+                :
+                  "[{" +
+                    "\"recvTimeTs\":\"12\"," +
+                    "\"recvTime\":\"1970-01-01T00:00:12.345Z\"," +
+                    "\"fiwareServicePath\":\"myServicePath\"," +
+                    "\"entityId\":null," + 
+                    "\"entityType\":null," +
+                    "\"name1\":\"value1\"," +
+                    "\"name1_md\":[" +
+                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}" + 
+                    "]," +
+                    "\"name2\":{\"p1\":\"v1\",\"p2\":true}," +
+                    "\"name2_md\":[" +
+                      "{\"name\":\"md1_name\",\"type\":\"md1_type\",\"value\":\"md1_value\"}," +
+                      "{\"name\":\"md2_name\",\"type\":\"md2_type\",\"value\":\"md2_value\"}" +
+                    "]" +
+                  "}]";
             assertEquals(expectedRecords, records);
           }
         };

@@ -202,7 +202,6 @@ public class NGSICKANSink extends NGSISink {
             logger.debug("Null batch, nothing to do");
             return;
         } // if
-
         // iterate on the destinations, for each one a single create / append will be performed
         // TODO: assumes each destination has a uniq organisation and package name; is this true?
         for (String destination : batch.getDestinations()) {
@@ -391,13 +390,13 @@ public class NGSICKANSink extends NGSISink {
             for (NotifyContextRequest.ContextAttribute contextAttribute : entityAttrs) {
                 String attrName = contextAttribute.getName();
                 String attrType = contextAttribute.getType();
-                String attrValue = contextAttribute.getContextValue(true);
+                JsonElement attrValue = contextAttribute.getContextValue();
                 String attrMetadata = contextAttribute.getContextMetadata();
                 logger.debug("Processing context attribute (name=" + attrName + ", entityType="
                         + attrType + ")");
 
                 // create part of the column with the current attribute (a.k.a. a column)
-                record.addProperty(attrName, attrValue);
+                record.add(attrName, attrValue);
 
                 // metadata is an special case, because CKAN doesn't support empty array, e.g. "[ ]"
                 // (http://stackoverflow.com/questions/24207065/inserting-empty-arrays-in-json-type-fields-in-datastore)
